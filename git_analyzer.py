@@ -1,6 +1,9 @@
+import logging
 import subprocess
 import os
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class DiffMode(Enum):
@@ -26,6 +29,7 @@ class GitManager:
         self.diff_mode = diff_mode
         self.base_ref = base_ref
         self.target_ref = target_ref
+        logger.debug(f"GitManager 초기화: mode={diff_mode.value}, extensions={extensions}")
 
     def _build_diff_command(self, file_path: str | None = None) -> list[str]:
         """diff 모드에 따른 git 명령어 생성"""
@@ -45,29 +49,39 @@ class GitManager:
         if file_path:
             cmd.extend(["--", file_path])
 
+        logger.debug(f"Git 명령어: {' '.join(cmd)}")
         return cmd
 
     def get_diff_files(self) -> list[str]:
         """변경된 파일 목록 추출 (소스코드만 필터링)"""
         cmd = self._build_diff_command()
         cmd.append("--name-only")
+        logger.debug(f"변경 파일 검색: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
-        return [
+        files = [
             f for f in result.stdout.split('\n')
             if f and f.endswith(self.extensions)
         ]
+        logger.debug(f"변경 파일 {len(files)}개 발견")
+        return files
 
     def get_file_content(self, file_path: str) -> str:
         """파일 전체 내용 로드"""
+        logger.debug(f"파일 내용 로드: {file_path}")
         if os.path.exists(file_path):
             with open(file_path, 'r', encoding='utf-8') as f:
-                return f.read()
+                content = f.read()
+            logger.debug(f"파일 로드 완료: {len(content)} bytes")
+            return content
+        logger.warning(f"파일이 존재하지 않음: {file_path}")
         return ""
 
     def get_diff_context(self, file_path: str) -> str:
         """특정 파일의 diff 내용만 추출"""
+        logger.debug(f"Diff 추출: {file_path}")
         cmd = self._build_diff_command(file_path)
         result = subprocess.run(cmd, capture_output=True, text=True)
+        logger.debug(f"Diff 추출 완료: {len(result.stdout)} bytes")
         return result.stdout
 
     def get_project_structure(self) -> str:
@@ -75,6 +89,7 @@ class GitManager:
         git ls-files를 활용한 프로젝트 구조 반환
         .gitignore 자동 적용, Spring (Java/Kotlin) 프로젝트 지원
         """
+        logger.debug("프로젝트 구조 스캔 시작")
         # 소스코드 + 설정 파일 확장자
         include_exts = {
             '.java', '.kt',                    # Java/Kotlin
@@ -95,4 +110,5 @@ class GitManager:
             if f and any(f.endswith(ext) for ext in include_exts)
         ]
 
+        logger.debug(f"프로젝트 구조 스캔 완료: {len(files)}개 파일")
         return '\n'.join(sorted(files))

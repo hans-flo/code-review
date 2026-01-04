@@ -15,8 +15,11 @@ Git 변경사항을 분석하여 3가지 관점에서 동시에 코드 리뷰를
 ## 요구사항
 
 - Python 3.11+
-- [Ollama](https://ollama.ai/) (로컬 LLM 실행)
 - Git
+- LLM Provider (아래 중 하나):
+  - [Ollama](https://ollama.ai/) (로컬 LLM)
+  - OpenAI API Key
+  - Google Gemini API Key
 
 ## 설치
 
@@ -24,8 +27,16 @@ Git 변경사항을 분석하여 3가지 관점에서 동시에 코드 리뷰를
 # 의존성 설치
 pip install -r requirements.txt
 
-# Ollama 모델 다운로드
+# LLM Provider 설정 (택 1)
+
+# 1. Ollama 사용 시
 ollama pull qwen2.5-coder:14b
+
+# 2. OpenAI 사용 시
+export OPENAI_API_KEY="your-openai-api-key"
+
+# 3. Gemini 사용 시
+export GOOGLE_API_KEY="your-google-api-key"
 ```
 
 ## 사용법
@@ -82,10 +93,30 @@ git = GitManager(diff_mode=DiffMode.BRANCH, base_ref="main", target_ref="HEAD")
 
 ### LLM 모델 변경
 
-`main.py`에서 모델명 수정:
+`main.py`에서 원하는 LLM Provider를 선택할 수 있습니다:
 
+#### Ollama (로컬)
 ```python
+from llm_interface import OllamaClient
 llm = OllamaClient(model_name="qwen2.5-coder:14b")
+```
+
+#### OpenAI
+```python
+from llm_interface import OpenAIClient
+# API 키는 환경변수 OPENAI_API_KEY에서 자동으로 읽어옵니다
+llm = OpenAIClient(model_name="gpt-4o-mini")
+# 또는 직접 지정
+llm = OpenAIClient(model_name="gpt-4o", api_key="your-api-key")
+```
+
+#### Google Gemini
+```python
+from llm_interface import GeminiClient
+# API 키는 환경변수 GOOGLE_API_KEY에서 자동으로 읽어옵니다
+llm = GeminiClient(model_name="gemini-1.5-flash")
+# 또는 직접 지정
+llm = GeminiClient(model_name="gemini-1.5-pro", api_key="your-api-key")
 ```
 
 ### RAG 규칙 추가
@@ -101,4 +132,5 @@ llm = OllamaClient(model_name="qwen2.5-coder:14b")
 ## 참고 문서
 
 - [API Reference](API.md) - 클래스/함수 상세 설명
+- [LLM Provider 가이드](LLM_GUIDE.md) - Ollama, OpenAI, Gemini 사용법
 - [CLAUDE.md](CLAUDE.md) - Claude Code 가이드

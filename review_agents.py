@@ -1,5 +1,8 @@
+import logging
 from llm_interface import LLMProvider
 from rag_engine import RAGService, preprocess_diff_for_query
+
+logger = logging.getLogger(__name__)
 
 
 class ReviewAgent:
@@ -23,15 +26,22 @@ class ReviewAgent:
         Returns:
             리뷰 결과 (마크다운 형식)
         """
+        logger.info(f"🔍 [{self.name}] 리뷰 시작: {file_path}")
+
         # 1. RAG: diff 전처리 후 관련 문서 검색
+        logger.debug(f"   [{self.name}] Diff 전처리 중...")
         cleaned_diff = preprocess_diff_for_query(diff_content)
+
+        logger.info(f"   [{self.name}] RAG 문서 검색 중 (category={self.category}, k=3)...")
         relevant_docs = self.rag.search(
             query_text=cleaned_diff[:1000],
             category=self.category,
             k=3
         )
+        logger.info(f"   [{self.name}] RAG 검색 완료 ({len(relevant_docs)} bytes)")
 
         # 2. 프롬프트 구성
+        logger.debug(f"   [{self.name}] 프롬프트 구성 중...")
         system_prompt = f"""
             당신은 {self.name} 전문가입니다.
             
@@ -55,6 +65,9 @@ class ReviewAgent:
 문제가 없다면 'PASS'라고만 답하세요."""
 
         # 3. LLM 호출
+        logger.info(f"🤖 [{self.name}] LLM 호출 중...")
         print(f"🚀 [{self.name}] 검증 시작: {file_path}")
         result = await self.llm.generate(system_prompt, user_prompt)
+        logger.info(f"✅ [{self.name}] LLM 응답 완료 ({len(result)} bytes)")
+
         return f"## 🕵️ {self.name} Review\n{result}\n"

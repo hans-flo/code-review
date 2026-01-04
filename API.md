@@ -4,12 +4,43 @@
 
 | 파일 | 역할 |
 |------|------|
-| `main.py` | 진입점 - 에이전트 초기화 및 병렬 실행 오케스트레이션 |
+| `main.py` | 진입점 - 에이전트 초기화 및 병렬 실행 오케스트레이션, 로깅 설정 |
 | `llm_interface.py` | LLM 추상화 - Strategy Pattern으로 모델 교체 용이 |
 | `rag_engine.py` | RAG 서비스 - ChromaDB 기반 문서 검색 |
 | `git_analyzer.py` | Git 분석 - diff 추출 및 프로젝트 구조 파악 |
 | `review_agents.py` | 리뷰 에이전트 - RAG + LLM 조합으로 코드 검증 |
 | `init_rag_docs.py` | RAG 초기화 - 도메인/보안/컨벤션 규칙 문서 등록 |
+
+---
+
+## 로깅
+
+모든 주요 모듈에 Python `logging` 모듈을 사용한 로깅이 추가되어 있습니다.
+
+### 로그 레벨
+- **INFO**: 주요 단계 진행 상황 (초기화, 파일 분석, 에이전트 실행 등)
+- **DEBUG**: 상세 디버깅 정보 (명령어, 파일 크기, RAG 검색 등)
+- **WARNING**: 경고 메시지 (파일 없음, 변경사항 없음 등)
+
+### 실행 흐름 로그
+```
+[INFO] 🚀 코드 리뷰 시스템 시작
+[INFO] 📦 RAG 서비스 초기화 중...
+[INFO] ✅ RAG 서비스 초기화 완료
+[INFO] 📦 Git 분석기 초기화 중...
+[INFO] ✅ Git 분석기 초기화 완료
+[INFO] 📦 LLM 클라이언트 초기화 중...
+[INFO] ✅ LLM 클라이언트 초기화 완료
+[INFO] 📦 리뷰 에이전트 초기화 중...
+[INFO] ✅ 3개 에이전트 초기화 완료
+[INFO] 🔍 변경된 파일 검색 중...
+[INFO] ✅ N개 파일 변경 감지
+[INFO] 📂 [1/N] 파일 분석 시작: path/to/file
+[INFO] 🔍 [Agent Name] 리뷰 시작
+[INFO] 🤖 [Agent Name] LLM 호출 중...
+[INFO] ✅ [Agent Name] LLM 응답 완료
+[INFO] 🎉 코드 리뷰 시스템 종료
+```
 
 ---
 
@@ -20,6 +51,8 @@
 | `LLMProvider` | LLM 제공자 추상 클래스 (ABC) |
 | `LLMProvider.generate()` | 시스템/유저 프롬프트로 비동기 응답 생성 |
 | `OllamaClient` | Ollama 로컬 LLM 구현체 |
+| `OpenAIClient` | OpenAI API 구현체 (GPT-4, GPT-3.5 등) |
+| `GeminiClient` | Google Gemini API 구현체 |
 
 ---
 

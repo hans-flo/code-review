@@ -1,20 +1,55 @@
 """RAG 테스트용 샘플 문서 초기화 스크립트"""
 
+import os
 from rag_engine import RAGService
+
+
+def load_domain_documents():
+    """domain.md 파일을 읽어서 섹션별로 문서를 분리합니다."""
+    domain_file_path = os.path.join(os.path.dirname(__file__), "docs", "domain.md")
+
+    if not os.path.exists(domain_file_path):
+        print(f"⚠️  domain.md 파일을 찾을 수 없습니다: {domain_file_path}")
+        return []
+
+    with open(domain_file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 문서를 의미있는 단위로 분할 (섹션 기반)
+    docs = []
+    current_section = []
+    lines = content.split("\n")
+
+    for line in lines:
+        # 빈 줄이 2개 이상 연속되면 새로운 섹션으로 간주
+        if line.strip():
+            current_section.append(line)
+        elif current_section:
+            # 현재 섹션을 저장
+            section_text = "\n".join(current_section).strip()
+            if len(section_text) > 50:  # 최소 길이 필터
+                docs.append(section_text)
+            current_section = []
+
+    # 마지막 섹션 추가
+    if current_section:
+        section_text = "\n".join(current_section).strip()
+        if len(section_text) > 50:
+            docs.append(section_text)
+
+    return docs
 
 
 def init_sample_documents():
     rag = RAGService()
 
-    # 도메인 규칙 문서
-    domain_docs = [
-        "주문 취소 시 포인트는 즉시 환불되어야 한다. 환불 처리는 반드시 트랜잭션 내에서 수행되어야 하며, 부분 취소 시에도 포인트 비율 계산이 정확해야 한다.",
-        "사용자 인증 토큰은 24시간 후 만료되어야 한다. 리프레시 토큰은 7일간 유효하며, 로그아웃 시 모든 토큰을 무효화해야 한다.",
-        "결제 금액 계산 시 부동소수점 연산을 피하고 정수(원 단위) 또는 Decimal 타입을 사용해야 한다. 할인율 적용 시 반올림 정책을 명확히 해야 한다.",
-        "재고 차감은 결제 완료 후에만 수행되어야 하며, 동시성 문제를 방지하기 위해 비관적 락(Pessimistic Lock)을 사용해야 한다.",
-    ]
+    # 기존 컬렉션을 초기화 (재실행해도 안전)
+    rag.reset_collection(name="code_docs")
 
-    # 보안 규칙 문서
+    # domain.md 파일에서 문서 로드
+    domain_docs = load_domain_documents()
+
+    # 보안 규칙 문서 (기본 제공)
     security_docs = [
         "SQL Injection 방지를 위해 반드시 PreparedStatement 또는 ORM의 파라미터 바인딩을 사용해야 한다. 문자열 연결로 쿼리를 생성하지 말 것.",
         "사용자 입력값은 반드시 검증(Validation)과 이스케이프(Escape) 처리를 해야 한다. XSS 공격 방지를 위해 HTML 출력 시 인코딩 필수.",
@@ -23,7 +58,7 @@ def init_sample_documents():
         "로그에 비밀번호, API 키, 개인정보(주민번호, 카드번호 등)를 출력하지 말 것. 마스킹 처리 필수.",
     ]
 
-    # 컨벤션 규칙 문서
+    # 컨벤션 규칙 문서 (기본 제공)
     convention_docs = [
         "함수명은 동사로 시작해야 한다 (예: get_user, create_order, validate_input). 클래스명은 명사형 PascalCase를 사용한다.",
         "한 함수는 하나의 역할만 수행해야 한다 (Single Responsibility). 함수 길이는 30줄 이내를 권장하며, 50줄을 초과하면 분리를 검토한다.",
@@ -32,32 +67,36 @@ def init_sample_documents():
         "코드 중복(DRY 원칙 위반)을 피해야 한다. 3번 이상 반복되는 로직은 함수로 추출한다.",
     ]
 
+    if not domain_docs and not security_docs and not convention_docs:
+        print("❌ 로드할 문서가 없습니다.")
+        return
+
     # 문서 추가
-    all_docs = []
-    all_metadatas = []
-    all_ids = []
+    all_docs: list[str] = []
+    all_metadatas: list[dict] = []
+    all_ids: list[str] = []
 
     for i, doc in enumerate(domain_docs):
         all_docs.append(doc)
-        all_metadatas.append({"category": "domain"})
+        all_metadatas.append({"category": "domain", "source": "docs/domain.md"})
         all_ids.append(f"domain_{i+1}")
 
     for i, doc in enumerate(security_docs):
         all_docs.append(doc)
-        all_metadatas.append({"category": "security"})
+        all_metadatas.append({"category": "security", "source": "built-in"})
         all_ids.append(f"security_{i+1}")
 
     for i, doc in enumerate(convention_docs):
         all_docs.append(doc)
-        all_metadatas.append({"category": "convention"})
+        all_metadatas.append({"category": "convention", "source": "built-in"})
         all_ids.append(f"convention_{i+1}")
 
     rag.add_documents(docs=all_docs, metadatas=all_metadatas, ids=all_ids)
 
     print(f"✅ RAG 문서 초기화 완료!")
-    print(f"   - Domain 규칙: {len(domain_docs)}개")
-    print(f"   - Security 규칙: {len(security_docs)}개")
-    print(f"   - Convention 규칙: {len(convention_docs)}개")
+    print(f"   - Domain 문서: {len(domain_docs)}개")
+    print(f"   - Security 문서: {len(security_docs)}개")
+    print(f"   - Convention 문서: {len(convention_docs)}개")
     print(f"   - 총 {len(all_docs)}개 문서 저장됨")
 
 

@@ -35,6 +35,15 @@ Multi-agent AI code review system using RAG and local LLMs. Three agents run con
 - **Security Auditor** - Security vulnerabilities
 - **Convention Checker** - Code style and patterns
 
+### Logging
+
+All major modules use Python's `logging` module for execution tracking:
+- **INFO**: Key progress steps (initialization, file analysis, agent execution)
+- **DEBUG**: Detailed debugging info (commands, file sizes, RAG searches)
+- **WARNING**: Warning messages (missing files, no changes)
+
+Each stage logs start/completion with emoji indicators (🚀, ✅, 🔍, 🤖, 📦, etc.)
+
 ### Data Flow
 ```
 Git diff → GitManager → Full file content + diff context
@@ -43,6 +52,7 @@ RAGService (ChromaDB) → Category-filtered document search
                               ↓
 ReviewAgent × 3 → Parallel LLM calls → Aggregated markdown report
 ```
+(All stages logged with timestamps and byte counts)
 
 ### Key Components
 
